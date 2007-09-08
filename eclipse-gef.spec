@@ -16,7 +16,7 @@
 Summary:        Graphical Editor Framework (GEF) plugin for Eclipse
 Name:           %{eclipse_name}-gef
 Version:        %{majmin}.%{micro}
-Release:        %mkrel 4.1
+Release:        %mkrel 4.2
 Epoch:          0
 License:        EPL
 Group:          Development/Java
