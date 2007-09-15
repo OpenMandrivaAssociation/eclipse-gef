@@ -16,7 +16,7 @@
 Summary:        Graphical Editor Framework (GEF) plugin for Eclipse
 Name:           %{eclipse_name}-gef
 Version:        %{majmin}.%{micro}
-Release:        %mkrel 4.2
+Release:        %mkrel 4.3
 Epoch:          0
 License:        EPL
 Group:          Development/Java
@@ -93,8 +93,6 @@ BuildRequires:    eclipse-pde
 %if %{gcj_support}
 BuildRequires:    gcc-java >= 0:4.0.2
 BuildRequires:    java-gcj-compat-devel >= 0:1.0.33
-Requires(post):   java-gcj-compat >= 0:1.0.33
-Requires(postun): java-gcj-compat >= 0:1.0.33
 %else
 BuildRequires:    java-devel >= 0:1.4.2
 BuildArch:        noarch
