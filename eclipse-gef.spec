@@ -16,7 +16,7 @@
 Summary:        Graphical Editor Framework (GEF) plugin for Eclipse
 Name:           %{eclipse_name}-gef
 Version:        %{majmin}.%{micro}
-Release:        %mkrel 4.3
+Release:        %mkrel 4.4
 Epoch:          0
 License:        EPL
 Group:          Development/Java
@@ -209,8 +209,10 @@ mv $RPM_BUILD_ROOT/%{eclipse_base}/notice.html \
 rm -rf ${RPM_BUILD_ROOT}
 
 %if %{gcj_support}
-%post -p %{_bindir}/rebuild-gcj-db
-%postun -p %{_bindir}/rebuild-gcj-db
+%post
+%{update_gcjdb}
+%postun
+%{clean_gcjdb}
 %endif
 
 %files
