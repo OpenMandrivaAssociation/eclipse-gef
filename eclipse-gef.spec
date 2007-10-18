@@ -87,6 +87,7 @@ cd org.eclipse.releng.gefbuilder
 #                      put the plugins that have just been built
 # -DskipFetch=true: don't fetch the sources 
 # -DbaseExists=true: don't download the SDK, we want to use the one in $SDK
+%if 0
 eclipse \
     -nosplash \
     -application org.eclipse.ant.core.antRunner \
@@ -111,6 +112,34 @@ eclipse \
     -DskipFetch=true                            \
     -DbaseExists=true                           \
     -DmapsLocal=true
+%else
+%{java} -cp %{eclipse_base}/startup.jar                \
+    -Dosgi.sharedConfiguration.area=%{_libdir}/eclipse/configuration \
+    -Duser.home=$homedir                              \
+    org.eclipse.core.launcher.Main                    \
+    -application org.eclipse.ant.core.antRunner \
+    -Dcomponent=sdk                             \
+    -DjavacFailOnError=true                     \
+    -DdontUnzip=true                            \
+    -DbaseLocation=$SDK                         \
+    -Dpde.build.scripts=$SDK/plugins/org.eclipse.pde.build/scripts \
+    -DskipFetch=true                            \
+    -DbaseExists=true
+
+# build the examples
+%{java} -cp %{eclipse_base}/startup.jar                \
+    -Dosgi.sharedConfiguration.area=%{_libdir}/eclipse/configuration \
+    -Duser.home=$homedir                              \
+    org.eclipse.core.launcher.Main                    \
+    -application org.eclipse.ant.core.antRunner       \
+    -Dcomponent=examples                        \
+    -DjavacFailOnError=true                     \
+    -DdontUnzip=true                            \
+    -DbaseLocation=$SDK                         \
+    -Dpde.build.scripts=$SDK/plugins/org.eclipse.pde.build/scripts \
+    -DskipFetch=true                            \
+    -DbaseExists=true
+%endif
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
