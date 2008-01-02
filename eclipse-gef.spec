@@ -31,6 +31,7 @@ BuildArch:        noarch
 
 Requires:       eclipse-platform >= 1:3.3
 
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
 %package        sdk
 Summary:        Eclipse GEF SDK
