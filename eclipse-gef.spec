@@ -5,8 +5,8 @@
 
 Summary:        Graphical Editor Framework (GEF) plugin for Eclipse
 Name:           eclipse-gef
-Version:        3.4.1
-Release:        %mkrel 0.2.0
+Version:        3.4.2
+Release:        %mkrel 0.1.0
 License:        Eclipse Public License
 Group:          Development/Java
 URL:            http://www.eclipse.org/gef/
@@ -15,7 +15,7 @@ URL:            http://www.eclipse.org/gef/
 # sh ./fetch-gef.sh
 Source0:        gef-%{version}.tar.gz
 
-BuildRequires:    eclipse-pde >= 1:3.3
+BuildRequires:    eclipse-pde >= 3.3
 BuildRequires:    zip
 %if %{gcj_support}
 BuildRequires:    java-gcj-compat-devel >= 1.0.33
@@ -29,7 +29,7 @@ ExclusiveArch:    %{ix86} x86_64 ppc ia64
 BuildArch:        noarch
 %endif
 
-Requires:       eclipse-platform >= 1:3.3
+Requires:       eclipse-platform >= 3.3
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
