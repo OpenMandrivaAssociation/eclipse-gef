@@ -1,65 +1,62 @@
-%define gcj_support     0
-%define eclipse_base     %{_libdir}/eclipse
-%define eclipse_dropin   %{_datadir}/eclipse/dropins/gef
-%define install_loc         %{_datadir}/eclipse/dropins
+%global eclipse_base     %{_libdir}/eclipse
+%global eclipse_dropin   %{_datadir}/eclipse/dropins
 
-Summary:        Graphical Editor Framework (GEF) plugin for Eclipse
-Name:           eclipse-gef
-Version:        3.4.2
-Release:        %mkrel 0.1.0
-License:        Eclipse Public License
-Group:          Development/Java
-URL:            http://www.eclipse.org/gef/
+Name:      eclipse-gef
+Version:   3.6.2
+Release:   1
+Summary:   Graphical Editing Framework (GEF) Eclipse plugin
+Group:     System/Libraries
+License:   EPL
+URL:       http://www.eclipse.org/gef/
 
-# Generate the source drop for GEF 3.3 using the enclosed script:
-# sh ./fetch-gef.sh
-Source0:        gef-%{version}.tar.gz
+# source tarball and the script used to generate it from upstream's source control
+# script usage:
+# $ sh get-gef.sh
+Source0:   gef-%{version}.tar.gz
+Source1:   get-gef.sh
 
-BuildRequires:    eclipse-pde >= 3.3
-BuildRequires:    zip
-%if %{gcj_support}
-BuildRequires:    java-gcj-compat-devel >= 1.0.33
-%else
-BuildRequires:    java-devel >= 1.4.2
-%endif
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-%if %{gcj_support}
-ExclusiveArch:    %{ix86} x86_64 ppc ia64
-%else
 BuildArch:        noarch
-%endif
 
-Requires:       eclipse-platform >= 3.3
-
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-
-%package        sdk
-Summary:        Eclipse GEF SDK
-Group:          Development/Java
-Requires:       %{name} = %{version}-%{release}
-
-%package        examples
-Summary:        Eclipse GEF examples
-Group:          Development/Java
-Requires:       %{name} = %{version}-%{release}
-Requires:       %{name}-sdk = %{version}-%{release}
+BuildRequires:    java-devel
+BuildRequires:    java-javadoc
+BuildRequires:    jpackage-utils
+BuildRequires:    eclipse-pde >= 0:3.6.0
+Requires:         java
+Requires:         jpackage-utils
+Requires:         eclipse-platform >= 0:3.6.0
 
 %description
-The eclipse-gef package contains Eclipse features and plugins that comprise
-the Graphical Editor Framework for Eclipse.
+The Graphical Editing Framework (GEF) allows developers to create a rich
+graphical editor from an existing application model. GEF is completely
+application neutral and provides the groundwork to build almost any
+application, including but not limited to: activity diagrams, GUI builders,
+class diagram editors, state machines, and even WYSIWYG text editors.
 
-%description    sdk
-Source and documentation for Eclipse GEF for use within Eclipse.
+%package   sdk
+Summary:   Eclipse GEF SDK
+Group:     System/Libraries
+Requires:  java-javadoc
+Requires:  eclipse-pde >= 0:3.5.1
+Requires:  %{name} = %{version}-%{release}
 
-%description    examples
-Example source code that demonstrates how to use Eclipse GEF.
+%description sdk
+Documentation and source for the Eclipse Graphical Editing Framework (GEF).
+
+%package   examples
+Summary:   Eclipse GEF examples
+Group:     System/Libraries
+Requires:  %{name} = %{version}-%{release}
+
+%description examples
+Installable versions of the example projects from the SDK that demonstrates how
+to use the Eclipse Graphical Editing Framework (GEF) plugin.
 
 %prep
 %setup -q -n gef-%{version}
 
-rm -r org.eclipse.gef-feature/sourceTemplateFeature
-rm -r org.eclipse.draw2d-feature/sourceTemplateFeature
-rm -r org.eclipse.zest-feature/sourceTemplateFeature
+#%patch0 -p0
 
 # make sure upstream hasn't sneaked in any jars we don't know about
 JARS=""
@@ -74,91 +71,53 @@ if [ ! -z "$JARS" ]; then
 fi
 
 %build
-# build all features
-%{eclipse_base}/buildscripts/pdebuild -f org.eclipse.gef.all \
-  -a "-DjavacTarget=1.6 -DjavacSource=1.6"
+# We build the gef and examples features seperately, rather than just
+# building the "all" feature, because it makes the files section easier to
+# maintain (i.e. we don't have to know when upstream adds a new plugin)
+
+# Note: Use the tag in get-gef.sh as the context qualifier because it's
+#       later than the tags of the individual plugins.
+OPTIONS="-DforceContextQualifier=v20110225-1600"
+
+# build gef features
+%{eclipse_base}/buildscripts/pdebuild -f org.eclipse.gef -a "$OPTIONS"
+%{eclipse_base}/buildscripts/pdebuild -f org.eclipse.zest -a "$OPTIONS"
+%{eclipse_base}/buildscripts/pdebuild -f org.eclipse.gef.sdk \
+  -a "$OPTIONS -DJAVADOC14_HOME=%{java_home}/bin"
+%{eclipse_base}/buildscripts/pdebuild -f org.eclipse.zest.sdk \
+  -a "$OPTIONS -DJAVADOC14_HOME=%{java_home}/bin"
+
+# build examples features
+%{eclipse_base}/buildscripts/pdebuild -f org.eclipse.gef.examples
 
 %install
 rm -rf %{buildroot}
 install -d -m 755 %{buildroot}%{eclipse_dropin}
-unzip -d %{buildroot}%{eclipse_dropin} build/rpmBuild/org.eclipse.gef.all.zip
+unzip -q -n -d %{buildroot}%{eclipse_dropin}/gef          build/rpmBuild/org.eclipse.gef.zip
+unzip -q -n -d %{buildroot}%{eclipse_dropin}/gef          build/rpmBuild/org.eclipse.zest.zip
+unzip -q -n -d %{buildroot}%{eclipse_dropin}/gef-sdk      build/rpmBuild/org.eclipse.gef.sdk.zip
+unzip -q -n -d %{buildroot}%{eclipse_dropin}/gef-sdk      build/rpmBuild/org.eclipse.zest.sdk.zip
+unzip -q -n -d %{buildroot}%{eclipse_dropin}/gef-examples build/rpmBuild/org.eclipse.gef.examples.zip
 
-%if %{gcj_support}
-%{_bindir}/aot-compile-rpm
-%endif
+# the non-sdk builds are a subset of the sdk builds, so delete duplicate features & plugins from the sdks
+(cd %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/features && ls %{buildroot}%{eclipse_dropin}/gef/eclipse/features | xargs rm -rf)
+(cd %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/plugins  && ls %{buildroot}%{eclipse_dropin}/gef/eclipse/plugins  | xargs rm -rf)
 
 %clean
-rm -rf ${RPM_BUILD_ROOT}
-
-%if %{gcj_support}
-%post
-%{update_gcjdb}
-
-%postun
-%{clean_gcjdb}
-%endif
+rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root,-)
-%dir %{eclipse_dropin}
-%doc %{eclipse_dropin}/eclipse/epl-v10.html
-%doc %{eclipse_dropin}/eclipse/notice.html
-%doc %{eclipse_dropin}/eclipse/readme
-%{eclipse_dropin}/eclipse/content.xml
-%{eclipse_dropin}/eclipse/features/org.eclipse.gef_*
-%{eclipse_dropin}/eclipse/features/org.eclipse.draw2d_*
-%{eclipse_dropin}/eclipse/features/org.eclipse.zest_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.gef_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.draw2d_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.zest.core_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.zest.layouts_*
-
-%if %{gcj_support}
-%dir %{_libdir}/gcj/%{name}
-%{_libdir}/gcj/%{name}/org.eclipse.gef_*
-%{_libdir}/gcj/%{name}/org.eclipse.draw2d_*
-%{_libdir}/gcj/%{name}/org.eclipse.zest.core_*
-%{_libdir}/gcj/%{name}/org.eclipse.zest.layouts_*
-%endif
+%{eclipse_dropin}/gef
+%doc org.eclipse.gef-feature/rootfiles/*
 
 %files sdk
 %defattr(-,root,root,-)
-%doc %{eclipse_dropin}/eclipse/epl-v10.html
-%doc %{eclipse_dropin}/eclipse/notice.html
-%doc %{eclipse_dropin}/eclipse/readme
-%{eclipse_dropin}/eclipse/features/org.eclipse.gef.sdk_*
-%{eclipse_dropin}/eclipse/features/org.eclipse.gef.source_*
-%{eclipse_dropin}/eclipse/features/org.eclipse.draw2d.sdk_*
-%{eclipse_dropin}/eclipse/features/org.eclipse.draw2d.source_*
-%{eclipse_dropin}/eclipse/features/org.eclipse.zest.sdk_*
-%{eclipse_dropin}/eclipse/features/org.eclipse.zest.source_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.gef.doc.isv_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.gef.source_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.gef.examples.ui.pde_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.draw2d.doc.isv_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.draw2d.source_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.zest.source_*
-
-%if %{gcj_support}
-%{_libdir}/gcj/%{name}/org.eclipse.gef.examples.ui.pde_*
-%endif
+%{eclipse_dropin}/gef-sdk
+%doc org.eclipse.gef.sdk-feature/rootfiles/*
 
 %files examples
 %defattr(-,root,root,-)
-%doc %{eclipse_dropin}/eclipse/epl-v10.html
-%doc %{eclipse_dropin}/eclipse/notice.html
-%doc %{eclipse_dropin}/eclipse/readme
-%{eclipse_dropin}/eclipse/features/org.eclipse.gef.all_*
-%{eclipse_dropin}/eclipse/features/org.eclipse.gef.examples_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.gef.examples.flow_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.gef.examples.logic_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.gef.examples.shapes_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.gef.examples.source_*
-%{eclipse_dropin}/eclipse/plugins/org.eclipse.gef.examples.text_*
+%{eclipse_dropin}/gef-examples
+%doc org.eclipse.gef.examples-feature/rootfiles/*
 
-%if %{gcj_support}
-%{_libdir}/gcj/%{name}/org.eclipse.gef.examples.flow_*
-%{_libdir}/gcj/%{name}/org.eclipse.gef.examples.logic_*
-%{_libdir}/gcj/%{name}/org.eclipse.gef.examples.shapes_*
-%{_libdir}/gcj/%{name}/org.eclipse.gef.examples.text_*
-%endif
