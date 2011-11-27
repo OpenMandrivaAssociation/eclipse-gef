@@ -3,7 +3,7 @@
 
 Name:      eclipse-gef
 Version:   3.6.2
-Release:   1
+Release:   3
 Summary:   Graphical Editing Framework (GEF) Eclipse plugin
 Group:     System/Libraries
 License:   EPL
