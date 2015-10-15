@@ -1,32 +1,28 @@
 %{?_javapackages_macros:%_javapackages_macros}
-%{?scl:%scl_package eclipse-gef}
-%{!?scl:%global pkg_name %{name}}
 %global eclipse_dropin   %{_datadir}/eclipse/dropins
-%global git_version 	b9f2e904bf9103bff8de05a0e56fd3623a88669e 
 
-Name:       %{?scl_prefix}eclipse-gef
-Version:   3.9.1
-#no tag in the repository, HEAD checked out
-Release:   0.2.gitb9f2e9.0%{?dist}
-Summary:   Graphical Editing Framework (GEF) Eclipse plugin
+# Release has not been tagged, but this commit comprised the release
+%global git_version f4eada958b82a6a8c4edff8e0f12cdad47b79c28
 
+Name:      eclipse-gef
+Version:   3.9.101
+Release:   4.1
+Summary:   Graphical Editing Framework (GEF) Eclipse plug-in
+Group:     Development/Java
 License:   EPL
 URL:       http://www.eclipse.org/gef/
 
 Source0:   http://git.eclipse.org/c/gef/org.eclipse.gef.git/snapshot/org.eclipse.gef-%{git_version}.tar.bz2
+# Use this script to generate a much smaller version of the above source tarball
+Source1:   get-gef.sh
 
 BuildArch:        noarch
 
-BuildRequires:    java-devel >= 1.7.0
-BuildRequires:    java-javadoc
-BuildRequires:    jpackage-utils
 BuildRequires:    tycho
-BuildRequires:    %{?scl_prefix}eclipse-pde >= 1:4.2.1
+BuildRequires:    eclipse-pde >= 1:4.4.0
+BuildRequires:    eclipse-license
 BuildRequires:    ant-contrib
-Requires:         java
-Requires:         jpackage-utils
-Requires:         %{?scl_prefix}eclipse-platform >= 1:4.2.1
-
+Requires:         eclipse-platform >= 1:4.4.0
 
 %description
 The Graphical Editing Framework (GEF) allows developers to create a rich
@@ -37,107 +33,78 @@ class diagram editors, state machines, and even WYSIWYG text editors.
 
 %package   sdk
 Summary:   Eclipse GEF SDK
-
-Requires:  java-javadoc
-Requires:  %{?scl_prefix}eclipse-pde >= 1:4.2.0-0.6
+Group:     Development/Java 
+Requires:  eclipse-pde >= 1:4.4.0
 Requires:  %{name} = %{version}-%{release}
 
 %description sdk
 Documentation and source for the Eclipse Graphical Editing Framework (GEF).
 
 %package   examples
-Summary:   Eclipse GEF examples
-
+Summary:   Development/Java
+Group:     System Environment/Libraries
 Requires:  %{name} = %{version}-%{release}
 
 %description examples
 Installable versions of the example projects from the SDK that demonstrates how
-to use the Eclipse Graphical Editing Framework (GEF) plugin.
+to use the Eclipse Graphical Editing Framework (GEF) plug-in.
 
 %prep
 %setup -q -n org.eclipse.gef-%{git_version}
 
-rm -fr org.eclipse.gef.baseline 
-# make sure upstream hasn't snuck in any jars we don't know about
-JARS=""
-for j in `find -name "*.jar"`; do
-  if [ ! -L $j ]; then
-    JARS="$JARS $j"
-  fi
-done
-if [ ! -z "$JARS" ]; then
-   echo "These jars should be deleted and symlinked to system jars: $JARS"
-   exit 1
-fi
+find -name *.jar -exec rm -rf {} \;
+find -name *.class -exec rm -rf {} \;
+
+%mvn_package "org.eclipse.gef:" __noinstall
+%mvn_package "org.eclipse.gef.features:org.eclipse.gef.all" __noinstall
+%mvn_package "org.eclipse.gef.features:org.eclipse.gef.examples{,.source}" examples
+%mvn_package ":org.eclipse.gef.examples.{logic,flow,text,shapes}:jar:sources:" examples
+%mvn_package "::jar:sources:" sdk
+%mvn_package ":*.{sdk,source,test,tests,capabilities}" sdk
+%mvn_package "org.eclipse.draw2d.{features,plugins}:org.eclipse.draw2d" core
+%mvn_package "org.eclipse.gef.{features,plugins}:org.eclipse.gef" core
+%mvn_package "org.eclipse.zest.features:org.eclipse.zest" core
+%mvn_package "org.eclipse.zest.plugins:org.eclipse.zest.{core,layouts}" core
 
 %build
-%{?scl:%scl_maven_opts}
-mvn-rpmbuild clean install -f org.eclipse.gef.releng/pom.xml -Dmaven.test.skip=true -P !KEPLER_4_3.target
-
-pushd org.eclipse.gef.repository/target/repository/features/
-for f in `ls`; do \
-    name=${f/.jar//};  \
-    mkdir $name;  \
-    unzip -q -n -d $name $f ; \
-    rm -rf $f
-done
-popd
+%mvn_build -j -f -- -f org.eclipse.gef.releng/pom.xml -P !LUNA_4_4.target
 
 %install
-install -d -m 755 %{buildroot}%{eclipse_dropin}
-install -d -m 755 %{buildroot}%{eclipse_dropin}/gef/eclipse/features
-install -d -m 755 %{buildroot}%{eclipse_dropin}/gef/eclipse/plugins
-install -d -m 755 %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/features
-install -d -m 755 %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/plugins
-install -d -m 755 %{buildroot}%{eclipse_dropin}/gef-examples/eclipse/features
-install -d -m 755 %{buildroot}%{eclipse_dropin}/gef-examples/eclipse/plugins
+%mvn_install
 
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.gef_* %{buildroot}%{eclipse_dropin}/gef/eclipse/features/
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.draw2d_* %{buildroot}%{eclipse_dropin}/gef/eclipse/features/
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.zest_* %{buildroot}%{eclipse_dropin}/gef/eclipse/features/
-
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.gef_*.jar %{buildroot}%{eclipse_dropin}/gef/eclipse/plugins/ 
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.draw2d_*.jar %{buildroot}%{eclipse_dropin}/gef/eclipse/plugins/
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.zest.core_*.jar %{buildroot}%{eclipse_dropin}/gef/eclipse/plugins/
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.zest.layouts_*.jar %{buildroot}%{eclipse_dropin}/gef/eclipse/plugins/
-
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.gef.sdk_* %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/features/
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.gef.source_* %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/features/
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.zest.sdk_* %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/features/
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.zest.source_* %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/features/
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.draw2d.sdk_* %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/features/
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.draw2d.source_* %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/features/
-
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.draw2d.doc.isv_*.jar %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/plugins/
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.draw2d.source_*.jar %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/plugins/
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.zest.doc.isv_*.jar %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/plugins/
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.gef.doc.isv_*.jar %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/plugins/
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.gef.examples.ui.pde_*.jar %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/plugins/
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.gef.source_*.jar %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/plugins/
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.zest.core.source_*.jar %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/plugins/
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.zest.layouts.source_*.jar %{buildroot}%{eclipse_dropin}/gef-sdk/eclipse/plugins/
-
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.gef.examples_* %{buildroot}%{eclipse_dropin}/gef-examples/eclipse/features/
-mv org.eclipse.gef.repository/target/repository/features/org.eclipse.gef.examples.source_* %{buildroot}%{eclipse_dropin}/gef-examples/eclipse/features/
-
-mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.gef.examples.{flow,flow.source,logic,logic.source,shapes,shapes.source,text,text.source}_*.jar %{buildroot}%{eclipse_dropin}/gef-examples/eclipse/plugins/
-
-%files
-%{eclipse_dropin}/gef
-%doc org.eclipse.gef-feature/license.html
+%files -f .mfiles -f .mfiles-core
 %doc org.eclipse.gef-feature/epl-v10.html
 
-%files sdk
-%{eclipse_dropin}/gef-sdk
-%doc org.eclipse.gef.sdk-feature/license.html
+%files sdk -f .mfiles-sdk
 %doc org.eclipse.gef.sdk-feature/epl-v10.html
 
-%files examples
-%{eclipse_dropin}/gef-examples
-%doc org.eclipse.gef.examples-feature/license.html
+%files examples -f .mfiles-examples
 %doc org.eclipse.gef.examples-feature/epl-v10.html
 
 %changelog
+* Wed Jun 17 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 3.9.101-4
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
+
+* Fri Feb  6 2015 Mikolaj Izdebski <mizdebsk@redhat.com> - 3.9.101-3
+- Rebuild to generate missing OSGi auto-requires
+
+* Wed Jan 14 2015 Mat Booth <mat.booth@redhat.com> - 3.9.101-2
+- Migrate to mvn_build/mvn_install
+
+* Tue Sep 30 2014 Mat Booth <mat.booth@redhat.com> - 3.9.101-1
+- Update to 3.9.101
+
+* Mon Jun 30 2014 Mat Booth <mat.booth@redhat.com> - 3.9.100-1.gitb63ec56
+- Update to latest upstream release
+- Add a script to make smaller source tarballs
+- Add BR on eclipse-license
+
+* Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 3.9.1-0.4.gitb9f2e9
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
+
+* Fri Mar 28 2014 Michael Simacek <msimacek@redhat.com> - 3.9.1-0.3.gitb9f2e9
+- Use Requires: java-headless rebuild (#1067528)
+
 * Mon Oct 28 2013 Krzysztof Daniel <kdaniel@redhat.com> 3.9.1-0.2.gitb9f2e9
 - Deploy missing bundles and features.
 
@@ -346,3 +313,4 @@ mv org.eclipse.gef.repository/target/repository/plugins/org.eclipse.gef.examples
 
 * Sun Oct 31 2004 Phil Muldoon <pmuldoon@redhat.com> 3.0.1-1
 - Initial Import
+
