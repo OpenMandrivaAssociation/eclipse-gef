@@ -73,6 +73,7 @@ find -name *.class -exec rm -rf {} \;
 %mvn_install
 
 %files -f .mfiles -f .mfiles-core
+%{_datadir}/maven-metadata/eclipse-gef.xml
 %doc org.eclipse.gef-feature/epl-v10.html
 
 %files sdk -f .mfiles-sdk
