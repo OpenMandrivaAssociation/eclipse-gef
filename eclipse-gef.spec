@@ -10,7 +10,7 @@ Release:   4.2
 Summary:   Graphical Editing Framework (GEF) Eclipse plug-in
 Group:     Development/Java
 License:   EPL
-URL:       http://www.eclipse.org/gef/
+URL:       https://www.eclipse.org/gef/
 
 Source0:   http://git.eclipse.org/c/gef/org.eclipse.gef.git/snapshot/org.eclipse.gef-%{git_version}.tar.bz2
 # Use this script to generate a much smaller version of the above source tarball
